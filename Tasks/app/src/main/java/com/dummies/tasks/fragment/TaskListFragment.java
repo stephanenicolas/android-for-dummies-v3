@@ -135,7 +135,6 @@ class OrmLiteListLoader<T> extends AsyncTaskLoader<List<T>>
         super(context);
         this.dao = dao;
         this.query = query;
-        dao.registerObserver(this);
     }
 
     @Override
@@ -162,6 +161,8 @@ class OrmLiteListLoader<T> extends AsyncTaskLoader<List<T>>
 
     @Override
     protected void onStartLoading() {
+        dao.registerObserver(this);
+
         if (results == null) {
             forceLoad();
         } else {
@@ -182,6 +183,7 @@ class OrmLiteListLoader<T> extends AsyncTaskLoader<List<T>>
         super.onReset();
         onStopLoading();
         results = null;
+        dao.unregisterObserver(this);
     }
 
     public void onChange() {
