@@ -121,6 +121,8 @@ public class TaskListFragment extends Fragment implements
 
 
 // TODO move to ormlite
+// Need to see what happens with Android L first, are they going to add
+// their own cursor adapter for recyclerview?
 class OrmLiteListLoader<T> extends AsyncTaskLoader<List<T>>
         implements Dao.DaoObserver {
 
