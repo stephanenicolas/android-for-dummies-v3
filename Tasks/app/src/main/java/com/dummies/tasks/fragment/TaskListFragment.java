@@ -8,7 +8,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Loader;
-import android.database.Cursor;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -26,15 +25,11 @@ import com.dummies.tasks.activity.TaskPreferencesActivity;
 import com.dummies.tasks.db.TasksDatabaseHelper;
 import com.dummies.tasks.interfaces.OnEditTask;
 import com.dummies.tasks.model.Task;
-import com.j256.ormlite.android.AndroidCompiledStatement;
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.stmt.PreparedQuery;
-import com.j256.ormlite.support.DatabaseConnection;
 
 import java.sql.SQLException;
 import java.util.List;
-
-import static com.j256.ormlite.stmt.StatementBuilder.StatementType.SELECT;
 
 public class TaskListFragment extends Fragment implements
         LoaderManager.LoaderCallbacks<List<Task>> {
@@ -103,11 +98,11 @@ public class TaskListFragment extends Fragment implements
 
     @Override
     public Loader<List<Task>> onCreateLoader(int ignored, Bundle args) {
-        return new AsyncTaskLoader<List<Task>>() {
-            @Override
-            public List<Task> loadInBackground() {
-
-            }
+        try {
+            return new OrmLiteListLoader<Task>(getActivity(), taskDao,
+                    taskDao.queryBuilder().prepare());
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -125,6 +120,80 @@ public class TaskListFragment extends Fragment implements
 
 
 
+// TODO move to ormlite
+class OrmLiteListLoader<T> extends AsyncTaskLoader<List<T>>
+        implements Dao.DaoObserver {
+
+    protected Dao<T, ?> dao;
+    protected PreparedQuery<T> query;
+    protected List<T> results;
+
+    public OrmLiteListLoader(Context context, Dao<T, ?> dao,
+                          PreparedQuery<T> query) {
+        super(context);
+        this.dao = dao;
+        this.query = query;
+        dao.registerObserver(this);
+    }
+
+    @Override
+    public List<T> loadInBackground() {
+        try {
+            return dao.query(query);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void deliverResult(List<T> newResults) {
+        if (isReset()) {
+            return;
+        }
+
+        results = newResults;
+
+        if (isStarted()) {
+            super.deliverResult(results);
+        }
+    }
+
+    @Override
+    protected void onStartLoading() {
+        if (results == null) {
+            forceLoad();
+        } else {
+            deliverResult(results);
+            if (takeContentChanged()) {
+                forceLoad();
+            }
+        }
+    }
+
+    @Override
+    protected void onStopLoading() {
+        cancelLoad();
+    }
+
+    @Override
+    protected void onReset() {
+        super.onReset();
+        onStopLoading();
+        results = null;
+    }
+
+    public void onChange() {
+        onContentChanged();
+    }
+
+    public PreparedQuery<T> getQuery() {
+        return query;
+    }
+
+    public void setQuery(PreparedQuery<T> mQuery) {
+        this.query = mQuery;
+    }
+}
 
 
 
@@ -142,6 +211,7 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
 
     public void setTasks(List<Task> tasks) {
         this.tasks = tasks;
+        notifyDataSetChanged();
     }
 
     @Override
