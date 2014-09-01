@@ -10,8 +10,7 @@ import android.content.Intent;
 import com.dummies.tasks.R;
 
 import static android.content.Context.NOTIFICATION_SERVICE;
-import static com.dummies.tasks.provider.TaskProvider
-        .COLUMN_TASKID;
+import static com.dummies.tasks.fragment.TaskEditFragment.TASK_ID;
 
 public class OnAlarmReceiver extends BroadcastReceiver {
     @Override
@@ -35,8 +34,8 @@ public class OnAlarmReceiver extends BroadcastReceiver {
         // from the OnAlarmReceiver's broadcast intent.
         Intent taskEditIntent =
                 new Intent(context, com.dummies.tasks.activity.TaskEditActivity.class);
-        long taskId = intent.getExtras().getLong( COLUMN_TASKID);
-        taskEditIntent.putExtra(COLUMN_TASKID, taskId);
+        long taskId = intent.getExtras().getLong(TASK_ID);
+        taskEditIntent.putExtra(TASK_ID, taskId);
 
         // Create the PendingIntent that will wrap the
         // taskEditIntent.  All intents that are used in

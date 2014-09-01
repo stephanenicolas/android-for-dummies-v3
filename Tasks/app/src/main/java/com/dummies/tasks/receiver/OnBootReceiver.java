@@ -3,63 +3,51 @@ package com.dummies.tasks.receiver;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 
+import com.dummies.tasks.db.TasksDatabaseHelper;
+import com.dummies.tasks.model.Task;
 import com.dummies.tasks.util.ReminderManager;
+import com.j256.ormlite.dao.Dao;
 
+import java.sql.SQLException;
 import java.util.Calendar;
-
-import static com.dummies.tasks.provider.TaskProvider.COLUMN_DATE_TIME;
-import static com.dummies.tasks.provider.TaskProvider.COLUMN_TASKID;
-import static com.dummies.tasks.provider.TaskProvider.CONTENT_URI;
+import java.util.List;
 
 /**
  * This class will be triggered when the phone first boots so that our
  * app can re-install any alarms that need to be set.  If we didn't do
  * this, then the phone would lose all of our alarms on reboot!
+ *
+ * Note: Because this receiver does I/O operations with the database,
+ * it SHOULD do its work in a background service.  We're going to skip
+ * that step for simplicity, but you shouldn't!  Check out
+ * WakefulBroadcastReceiver for more details on how to do this.
  */
 public class OnBootReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
 
-        // Get the cursor for our tasks
-        Cursor cursor = context.getContentResolver().query(
-                CONTENT_URI, null, null, null, null);
+        Dao<Task,Long> taskDao =
+                TasksDatabaseHelper.getSingleton(context)
+                .getDao(Task.class);
 
-        // If our db is empty, don't do anything
-        if (cursor == null)
-            return;
-
-
+        // Get all of the tasks from the database
+        List<Task> tasks;
         try {
-            cursor.moveToFirst();
+            tasks = taskDao.queryForAll();
+        } catch( SQLException e ) {
+            throw new RuntimeException(e);
+        }
 
-            // get the indices of the taskId and date_time columns
-            int taskIdColumnIndex = cursor
-                    .getColumnIndex(COLUMN_TASKID);
-            int dateTimeColumnIndex = cursor
-                    .getColumnIndex(COLUMN_DATE_TIME);
+        // Loop over all of the tasks
+        for( Task task : tasks ) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(task.getDateTime());
 
-            // Loop over all of the tasks in the db
-            while (!cursor.isAfterLast()) {
-
-                // Get the id and dateTime for this task
-                long taskId = cursor.getLong(taskIdColumnIndex);
-                long dateTime = cursor.getLong(dateTimeColumnIndex);
-
-                Calendar cal = Calendar.getInstance();
-                cal.setTime(new java.util.Date(dateTime));
-
-                // Set the reminder
-                new ReminderManager(context).setReminder(taskId, cal);
-
-                cursor.moveToNext();
-            }
-
-        } finally {
-            // Always close the cursor when we finish!
-            cursor.close();
+            // Set the reminder
+            new ReminderManager(context).setReminder(task.getId(),
+                    cal);
         }
     }
 }

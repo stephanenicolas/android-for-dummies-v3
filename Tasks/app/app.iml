@@ -82,6 +82,8 @@
     <orderEntry type="library" exported="" name="support-annotations-21.0.0-rc1" level="project" />
     <orderEntry type="library" exported="" name="recyclerview-v7-21.0.0-rc1" level="project" />
     <orderEntry type="library" exported="" name="support-v4-21.0.0-rc1" level="project" />
+    <orderEntry type="library" exported="" name="ormlite-core-4.49-SNAPSHOT" level="project" />
+    <orderEntry type="library" exported="" name="ormlite-android-4.49-SNAPSHOT" level="project" />
   </component>
 </module>
 

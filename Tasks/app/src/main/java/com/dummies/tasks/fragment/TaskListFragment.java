@@ -3,9 +3,8 @@ package com.dummies.tasks.fragment;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.app.LoaderManager;
-import android.content.ContentUris;
+import android.content.AsyncTaskLoader;
 import android.content.Context;
-import android.content.CursorLoader;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Loader;
@@ -20,18 +19,28 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.dummies.tasks.R;
 import com.dummies.tasks.activity.TaskPreferencesActivity;
+import com.dummies.tasks.db.TasksDatabaseHelper;
 import com.dummies.tasks.interfaces.OnEditTask;
+import com.dummies.tasks.model.Task;
+import com.j256.ormlite.android.AndroidCompiledStatement;
+import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.stmt.PreparedQuery;
+import com.j256.ormlite.support.DatabaseConnection;
 
-import static com.dummies.tasks.provider.TaskProvider.COLUMN_TASKID;
-import static com.dummies.tasks.provider.TaskProvider.COLUMN_TITLE;
-import static com.dummies.tasks.provider.TaskProvider.CONTENT_URI;
+import java.sql.SQLException;
+import java.util.List;
+
+import static com.j256.ormlite.stmt.StatementBuilder.StatementType.SELECT;
 
 public class TaskListFragment extends Fragment implements
-        LoaderManager.LoaderCallbacks<Cursor> {
+        LoaderManager.LoaderCallbacks<List<Task>> {
 
+
+    Dao<Task,Long> taskDao;
     TaskListAdapter adapter;
     RecyclerView recyclerView;
 
@@ -39,7 +48,13 @@ public class TaskListFragment extends Fragment implements
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        adapter = new TaskListAdapter();
+        // Get a Data Access Object to help us manage our Tasks
+        taskDao = TasksDatabaseHelper.getSingleton(getActivity())
+                .getDao(Task.class);
+
+        // Create the adapter that will produce views for each
+        // task in the database
+        adapter = new TaskListAdapter(taskDao);
 
         getLoaderManager().initLoader(0, null, this);
     }
@@ -87,37 +102,46 @@ public class TaskListFragment extends Fragment implements
     }
 
     @Override
-    public Loader<Cursor> onCreateLoader(int ignored, final Bundle args) {
-        return new CursorLoader(getActivity(), CONTENT_URI, null, null,
-                null, null);
+    public Loader<List<Task>> onCreateLoader(int ignored, Bundle args) {
+        return new AsyncTaskLoader<List<Task>>() {
+            @Override
+            public List<Task> loadInBackground() {
+
+            }
+        }
     }
 
     @Override
-    public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
-        adapter.swapCursor(cursor);
+    public void onLoadFinished(Loader<List<Task>> loader,
+                               List<Task> tasks) {
+        adapter.setTasks(tasks);
     }
 
     @Override
-    public void onLoaderReset(Loader<Cursor> loader) {
-        // This is called when the last Cursor provided to
-        // onLoadFinished()
-        // above is about to be closed. We need to make sure we are no
-        // longer using it.
-        adapter.swapCursor(null);
+    public void onLoaderReset(Loader<List<Task>> loader) {
+        adapter.setTasks(null);
     }
 }
 
+
+
+
+
+
+
+
+
 class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
-    Cursor cursor;
-    int titleColumnIndex;
-    int idColumnIndex;
+    List<Task> tasks;
+    Dao<Task,Long> taskDao;
 
 
-    public void swapCursor(Cursor c) {
-        cursor = c;
-        cursor.moveToFirst();
-        titleColumnIndex = cursor.getColumnIndex(COLUMN_TITLE);
-        idColumnIndex = cursor.getColumnIndex(COLUMN_TASKID);
+    TaskListAdapter( Dao<Task,Long> taskDao ) {
+        this.taskDao = taskDao;
+    }
+
+    public void setTasks(List<Task> tasks) {
+        this.tasks = tasks;
     }
 
     @Override
@@ -136,8 +160,7 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
         final Context context = viewHolder.title.getContext();
 
         // set the text
-        cursor.moveToPosition(i);
-        viewHolder.title.setText(cursor.getString(titleColumnIndex));
+        viewHolder.title.setText(tasks.get(i).getTitle());
 
         // Set the click action
         viewHolder.title.setOnClickListener(new View.OnClickListener() {
@@ -147,23 +170,29 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
             }
         });
 
-        viewHolder.title.setOnLongClickListener( new View.OnLongClickListener() {
+        viewHolder.title.setOnLongClickListener(new View
+                .OnLongClickListener() {
             @Override
             public boolean onLongClick(View view) {
                 new AlertDialog.Builder(context)
                         .setTitle(R.string.delete_q)
                         .setMessage(viewHolder.title.getText())
                         .setCancelable(true)
-                        .setNegativeButton(android.R.string.cancel,null)
+                        .setNegativeButton(android.R.string.cancel, null)
                         .setPositiveButton(R.string.delete,
                                 new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface
                                                                 dialogInterface, int i) {
-                                        context.getContentResolver()
-                                                .delete(ContentUris
-                                                        .withAppendedId
-                                                                (CONTENT_URI, id), null, null);
+
+                                        try {
+                                            taskDao.delete(tasks.get(i));
+                                        } catch (SQLException e) {
+                                            Toast.makeText(context,
+                                                    R.string.task_save_error,
+                                                    Toast.LENGTH_LONG)
+                                                    .show();
+                                        }
                                     }
                                 })
                         .show();
@@ -175,13 +204,12 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
 
     @Override
     public long getItemId(int position) {
-        cursor.moveToPosition(position);
-        return cursor.getLong(idColumnIndex);
+        return tasks.get(position).getId();
     }
 
     @Override
     public int getItemCount() {
-        return cursor!=null ? cursor.getCount() : 0;
+        return tasks!=null ? tasks.size() : 0;
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {

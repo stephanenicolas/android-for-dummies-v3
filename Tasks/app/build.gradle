@@ -1,5 +1,16 @@
 apply plugin: 'com.android.application'
 
+
+
+// TODO for local ormlite build
+apply plugin: "maven"
+repositories {
+    mavenLocal()
+}
+
+
+
+
 android {
     compileSdkVersion 'android-L'
     buildToolsVersion "20.0.0"
@@ -22,4 +33,5 @@ android {
 
 dependencies {
     compile 'com.android.support:recyclerview-v7:21.0.0-rc1'
+    compile 'com.j256.ormlite:ormlite-android:4.49-SNAPSHOT' // TODO
 }

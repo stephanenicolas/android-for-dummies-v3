@@ -3,7 +3,10 @@ package com.dummies.tasks.activity;
 import android.app.Fragment;
 import android.content.Intent;
 
+import com.dummies.tasks.fragment.TaskEditFragment;
 import com.dummies.tasks.util.SingleFragmentActivity;
+
+import static com.dummies.tasks.fragment.TaskEditFragment.TASK_ID;
 
 /**
  * Our Reminder List activity for Phones
@@ -26,6 +29,6 @@ public class TaskListActivity extends SingleFragmentActivity
         // When we are asked to edit a reminder, start the
         // TaskEditActivity
         startActivity(new Intent(this, TaskEditActivity.class)
-                .putExtra(com.dummies.tasks.provider.TaskProvider.COLUMN_TASKID, id));
+                .putExtra(TASK_ID, id));
     }
 }

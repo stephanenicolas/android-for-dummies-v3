@@ -31,10 +31,6 @@
         </receiver>
         <receiver android:name=".receiver.OnAlarmReceiver" />
 
-        <provider
-            android:name=".provider.TaskProvider"
-            android:authorities="com.dummies.tasks.provider.TaskProvider"
-            android:exported="false" />
     </application>
 
 </manifest>

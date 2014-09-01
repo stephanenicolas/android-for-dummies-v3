@@ -9,6 +9,8 @@ import com.dummies.tasks.receiver.OnAlarmReceiver;
 
 import java.util.Calendar;
 
+import static com.dummies.tasks.fragment.TaskEditFragment.TASK_ID;
+
 /**
  * A helper class that knows how to set reminders using the AlarmManager
  */
@@ -28,7 +30,7 @@ public class ReminderManager {
         // Create an intent for our OnAlarmReceiver,
         // which will show the notification when it is called
         Intent i = new Intent(context, OnAlarmReceiver.class);
-        i.putExtra(com.dummies.tasks.provider.TaskProvider.COLUMN_TASKID, (long) taskId);
+        i.putExtra(TASK_ID, (long) taskId);
 
         // Create the PendingIntent that will wrap the
         // above intent.  All intents that are used in
