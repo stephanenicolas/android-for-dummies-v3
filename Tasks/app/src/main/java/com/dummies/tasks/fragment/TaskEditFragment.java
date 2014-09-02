@@ -6,12 +6,9 @@ import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.app.LoaderManager;
 import android.app.TimePickerDialog.OnTimeSetListener;
-import android.content.AsyncTaskLoader;
-import android.content.ContentUris;
-import android.content.CursorLoader;
+import android.content.Context;
 import android.content.Loader;
 import android.content.SharedPreferences;
-import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
@@ -29,17 +26,18 @@ import com.dummies.tasks.db.TasksDatabaseHelper;
 import com.dummies.tasks.interfaces.OnEditFinished;
 import com.dummies.tasks.model.Task;
 import com.dummies.tasks.util.ReminderManager;
-import com.j256.ormlite.android.apptools.OrmLiteCursorLoader;
+import com.j256.ormlite.android.apptools.OrmLitePreparedQueryLoader;
 import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.stmt.PreparedQuery;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
+import java.util.List;
 
 public class TaskEditFragment extends Fragment implements
         OnDateSetListener, OnTimeSetListener,
-        LoaderManager.LoaderCallbacks<Task> {
+        LoaderManager.LoaderCallbacks<List<Task>> {
 
     public static final String DEFAULT_EDIT_FRAGMENT_TAG =
             "editFragmentTag";
@@ -273,24 +271,24 @@ public class TaskEditFragment extends Fragment implements
     }
 
     @Override
-    public Loader<Task> onCreateLoader(int id, Bundle args) {
-        return new AsyncTaskLoader<Task>(getActivity()) {
-            @Override
-            public Task loadInBackground() {
-                try {
-                    return taskDao.queryForId(taskId);
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        };
+    public Loader<List<Task>> onCreateLoader(int id, Bundle args) {
+        try {
+            return new OrmLiteEntityLoader<Task,Long>(
+                    getActivity(),
+                    taskDao,
+                    taskDao.queryBuilder().where().idEq(taskId).prepare()
+            );
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
-    public void onLoadFinished(Loader<Task> loader, Task task) {
+    public void onLoadFinished(Loader<List<Task>> loader,
+                               List<Task> tasks) {
         // Close this fragmentClass down if the item we're editing was
         // deleted
-        if (task==null) {
+        if (tasks==null || tasks.size()!=1 ) {
             new Handler().post(new Runnable() {
                 @Override
                 public void run() {
@@ -300,6 +298,9 @@ public class TaskEditFragment extends Fragment implements
             return;
         }
 
+        // Get the first and only task in the list
+        Task task = tasks.iterator().next();
+
         titleText.setText(task.getTitle());
         bodyText.setText(task.getBody());
         calendar.setTime(task.getDateTime());
@@ -308,7 +309,36 @@ public class TaskEditFragment extends Fragment implements
     }
 
     @Override
-    public void onLoaderReset(Loader<Task> ignored) {
+    public void onLoaderReset(Loader<List<Task>> ignored) {
         // nothing to reset for this fragmentClass
+    }
+}
+
+
+// TODO Remove this class once XXX is accepted
+class OrmLiteEntityLoader<T,ID> extends
+        OrmLitePreparedQueryLoader<T,ID> implements Dao.DaoObserver {
+
+
+    OrmLiteEntityLoader(Context context, Dao<T, ID> dao,
+                        PreparedQuery<T> preparedQuery) {
+        super(context, dao, preparedQuery);
+    }
+
+    @Override
+    protected void onStartLoading() {
+        super.onStartLoading();
+        dao.registerObserver(this);
+    }
+
+    @Override
+    protected void onReset() {
+        super.onReset();
+        dao.unregisterObserver(this);
+    }
+
+    @Override
+    public void onChange() {
+        onContentChanged();
     }
 }
