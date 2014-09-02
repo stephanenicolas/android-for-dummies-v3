@@ -183,7 +183,7 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
         final Context context = viewHolder.titleView.getContext();
 
         // set the text
-        viewHolder.title.setText(tasks.get(i).getTitle());
+        viewHolder.titleView.setText(tasks.get(i).getTitle());
 
         // set the thumbnail image
         Picasso.with(context)
