@@ -325,7 +325,7 @@ public class TaskEditFragment extends Fragment implements
 }
 
 
-// TODO Remove this class once XXX is accepted
+// TODO Remove this class once https://github.com/j256/ormlite-android/pull/22 is accepted
 class OrmLiteEntityLoader<T,ID> extends
         OrmLitePreparedQueryLoader<T,ID> implements Dao.DaoObserver {
 
