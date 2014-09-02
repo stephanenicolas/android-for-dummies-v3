@@ -8,6 +8,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Loader;
 import android.os.Bundle;
+import android.support.v7.widget.CardView;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -16,6 +17,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,6 +28,7 @@ import com.dummies.tasks.interfaces.OnEditTask;
 import com.dummies.tasks.model.Task;
 import com.j256.ormlite.android.apptools.OrmLiteQueryForAllLoader;
 import com.j256.ormlite.dao.Dao;
+import com.squareup.picasso.Picasso;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -167,7 +170,7 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int i) {
         // create a new view
-        TextView v = (TextView) LayoutInflater.from(parent.getContext())
+        CardView v = (CardView) LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.task_row, parent, false);
 
         // wrap it in a ViewHolder
@@ -177,26 +180,31 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
     @Override
     public void onBindViewHolder(final ViewHolder viewHolder, int i) {
         final long id = getItemId(i);
-        final Context context = viewHolder.title.getContext();
+        final Context context = viewHolder.titleView.getContext();
 
         // set the text
         viewHolder.title.setText(tasks.get(i).getTitle());
 
+        // set the thumbnail image
+        Picasso.with(context)
+                .load("http://lorempixel.com/200/200/cats/?fakeId=" + id)
+                .into(viewHolder.imageView);
+
         // Set the click action
-        viewHolder.title.setOnClickListener(new View.OnClickListener() {
+        viewHolder.cardView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 ((OnEditTask) context).editTask(id);
             }
         });
 
-        viewHolder.title.setOnLongClickListener(new View
+        viewHolder.cardView.setOnLongClickListener( new View
                 .OnLongClickListener() {
             @Override
             public boolean onLongClick(View view) {
                 new AlertDialog.Builder(context)
                         .setTitle(R.string.delete_q)
-                        .setMessage(viewHolder.title.getText())
+                        .setMessage(viewHolder.titleView.getText())
                         .setCancelable(true)
                         .setNegativeButton(android.R.string.cancel, null)
                         .setPositiveButton(R.string.delete,
@@ -233,11 +241,15 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView title;
+        CardView cardView;
+        TextView titleView;
+        ImageView imageView;
 
-        public ViewHolder(TextView itemView) {
+        public ViewHolder(CardView itemView) {
             super(itemView);
-            title = itemView;
+            cardView = itemView;
+            titleView = (TextView) itemView.findViewById(R.id.text1);
+            imageView = (ImageView) itemView.findViewById(R.id.image);
         }
 
     }

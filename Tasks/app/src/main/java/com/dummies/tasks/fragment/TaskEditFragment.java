@@ -18,6 +18,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
@@ -29,6 +30,7 @@ import com.dummies.tasks.util.ReminderManager;
 import com.j256.ormlite.android.apptools.OrmLitePreparedQueryLoader;
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.stmt.PreparedQuery;
+import com.squareup.picasso.Picasso;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
@@ -62,6 +64,7 @@ public class TaskEditFragment extends Fragment implements
     Dao<Task,Long> taskDao;
     EditText titleText;
     EditText bodyText;
+    ImageView imageView;
     Button dateButton;
     Button timeButton;
     long taskId;
@@ -108,6 +111,7 @@ public class TaskEditFragment extends Fragment implements
         bodyText = (EditText) v.findViewById(R.id.body);
         dateButton = (Button) v.findViewById(R.id.task_date);
         timeButton = (Button) v.findViewById(R.id.task_time);
+        imageView = (ImageView) v.findViewById(R.id.image);
 
         // Tell the date and time buttons what to do when we click on
         // them.
@@ -304,6 +308,12 @@ public class TaskEditFragment extends Fragment implements
         titleText.setText(task.getTitle());
         bodyText.setText(task.getBody());
         calendar.setTime(task.getDateTime());
+
+        // set the thumbnail image
+        Picasso.with(getActivity())
+                .load("http://lorempixel.com/200/200/cats/?fakeId=" + taskId)
+                .into(imageView);
+
 
         updateButtons();
     }
