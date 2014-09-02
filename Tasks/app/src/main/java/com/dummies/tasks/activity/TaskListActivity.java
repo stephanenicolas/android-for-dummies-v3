@@ -1,8 +1,12 @@
 package com.dummies.tasks.activity;
 
+import android.app.ActivityOptions;
 import android.app.Fragment;
 import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
 
+import com.dummies.tasks.R;
 import com.dummies.tasks.util.SingleFragmentActivity;
 
 /**
@@ -22,10 +26,22 @@ public class TaskListActivity extends SingleFragmentActivity
      * Called when the user asks to edit or insert a task.
      */
     @Override
-    public void editTask(long id) {
+    public void editTask(long id, View itemViewRoot) {
+        // Define a nice image transition animation
+        Bundle optionBundle=null;
+        if( itemViewRoot!=null ) {
+            View imageView = itemViewRoot.findViewById(R.id.image);
+            ActivityOptions options = ActivityOptions
+                .makeSceneTransitionAnimation(this,
+                        imageView, "taskImage");
+            optionBundle = options.toBundle();
+        }
+
         // When we are asked to edit a reminder, start the
         // TaskEditActivity
         startActivity(new Intent(this, TaskEditActivity.class)
-                .putExtra(com.dummies.tasks.provider.TaskProvider.COLUMN_TASKID, id));
+                .putExtra(com.dummies.tasks.provider.TaskProvider
+                        .COLUMN_TASKID, id),
+                optionBundle );
     }
 }

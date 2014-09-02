@@ -5,6 +5,7 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.os.Bundle;
+import android.view.View;
 
 import com.dummies.tasks.interfaces.OnEditFinished;
 import com.dummies.tasks.R;
@@ -25,7 +26,7 @@ public class TaskListAndEditorActivity extends Activity implements
      * Called when the user asks to edit or insert a task.
      */
     @Override
-    public void editTask(long id) {
+    public void editTask(long id, View itemViewRoot ) {
         // Create the fragment and set the task id
         com.dummies.tasks.fragment.TaskEditFragment fragment = new com.dummies.tasks.fragment.TaskEditFragment();
         Bundle arguments = new Bundle();

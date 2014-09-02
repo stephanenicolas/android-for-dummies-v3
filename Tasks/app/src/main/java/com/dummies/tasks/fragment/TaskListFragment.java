@@ -78,7 +78,7 @@ public class TaskListFragment extends Fragment implements
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_insert:
-                ((OnEditTask) getActivity()).editTask(0);
+                ((OnEditTask) getActivity()).editTask(0,null);
                 return true;
             case R.id.menu_settings:
                 startActivity(new Intent(getActivity(),
@@ -151,7 +151,7 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
         viewHolder.cardView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                ((OnEditTask) context).editTask(id);
+                ((OnEditTask) context).editTask(id, viewHolder.cardView);
             }
         });
 

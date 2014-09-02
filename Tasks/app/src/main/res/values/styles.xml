@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <style name="TasksAppTheme" parent="android:Theme.Material.Light">
+        <!-- enable window content transitions -->
+        <item name="android:windowContentTransitions">true</item>
+        <!--<item name="android:windowAllowEnterTransitionOverlap">true</item> TODO -->
+        <!--<item name="android:windowAllowExitTransitionOverlap">true</item> TODO-->
+
+        <!-- specify shared element transitions -->
+        <item name="android:windowSharedElementEnterTransition">
+            @transition/move_image
+        </item>
+        <item name="android:windowSharedElementExitTransition">
+            @transition/move_image
+        </item>
+    </style>
+</resources>

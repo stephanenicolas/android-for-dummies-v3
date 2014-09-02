@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<transitionSet xmlns:android="http://schemas.android.com/apk/res/android">
+    <moveImage>
+        <!--
+            Set this transitions target IDs to be those which point to the ImageViews in both the
+            starting and result Activities
+            TODO I don't know if setting target ID here is necessary
+            from https://github.com/googlesamples/android-ActivitySceneTransition
+        -->
+        <targets>
+            <target android:targetId="@id/image" />
+        </targets>
+    </moveImage></transitionSet>
+

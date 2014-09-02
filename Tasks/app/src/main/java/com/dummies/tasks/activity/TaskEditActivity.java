@@ -28,6 +28,6 @@ public class TaskEditActivity extends SingleFragmentActivity
     public void finishEditingTask() {
         // When the user dismisses the editor, call finish to destroy
         // this activity.
-        finish();
+        finishAfterTransition();
     }
 }
