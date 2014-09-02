@@ -3,7 +3,6 @@ package com.dummies.tasks.fragment;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.app.LoaderManager;
-import android.content.AsyncTaskLoader;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -25,8 +24,8 @@ import com.dummies.tasks.activity.TaskPreferencesActivity;
 import com.dummies.tasks.db.TasksDatabaseHelper;
 import com.dummies.tasks.interfaces.OnEditTask;
 import com.dummies.tasks.model.Task;
+import com.j256.ormlite.android.apptools.OrmLiteQueryForAllLoader;
 import com.j256.ormlite.dao.Dao;
-import com.j256.ormlite.stmt.PreparedQuery;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -98,12 +97,7 @@ public class TaskListFragment extends Fragment implements
 
     @Override
     public Loader<List<Task>> onCreateLoader(int ignored, Bundle args) {
-        try {
-            return new OrmLiteListLoader<Task>(getActivity(), taskDao,
-                    taskDao.queryBuilder().prepare());
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        return new OrmLiteListLoader<Task,Long>(getActivity(), taskDao );
     }
 
     @Override
@@ -120,80 +114,34 @@ public class TaskListFragment extends Fragment implements
 
 
 
-// TODO switch to OrmLiteQueryForAllLoader once it supports notifications
-class OrmLiteListLoader<T> extends AsyncTaskLoader<List<T>>
-        implements Dao.DaoObserver {
+// TODO Remove this class once XXX is accepted
+class OrmLiteListLoader<T,ID> extends
+        OrmLiteQueryForAllLoader<T,ID> implements Dao.DaoObserver {
 
-    protected Dao<T, ?> dao;
-    protected PreparedQuery<T> query;
-    protected List<T> results;
 
-    public OrmLiteListLoader(Context context, Dao<T, ?> dao,
-                          PreparedQuery<T> query) {
+    protected OrmLiteListLoader(Context context) {
         super(context);
-        this.dao = dao;
-        this.query = query;
     }
 
-    @Override
-    public List<T> loadInBackground() {
-        try {
-            return dao.query(query);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
-    public void deliverResult(List<T> newResults) {
-        if (isReset()) {
-            return;
-        }
-
-        results = newResults;
-
-        if (isStarted()) {
-            super.deliverResult(results);
-        }
+    protected OrmLiteListLoader(Context context, Dao<T,ID> dao) {
+        super(context, dao);
     }
 
     @Override
     protected void onStartLoading() {
+        super.onStartLoading();
         dao.registerObserver(this);
-
-        if (results == null) {
-            forceLoad();
-        } else {
-            deliverResult(results);
-            if (takeContentChanged()) {
-                forceLoad();
-            }
-        }
-    }
-
-    @Override
-    protected void onStopLoading() {
-        cancelLoad();
     }
 
     @Override
     protected void onReset() {
         super.onReset();
-        onStopLoading();
-        results = null;
         dao.unregisterObserver(this);
     }
 
+    @Override
     public void onChange() {
         onContentChanged();
-    }
-
-    public PreparedQuery<T> getQuery() {
-        return query;
-    }
-
-    public void setQuery(PreparedQuery<T> mQuery) {
-        this.query = mQuery;
     }
 }
 
