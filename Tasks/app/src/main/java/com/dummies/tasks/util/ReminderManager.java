@@ -5,19 +5,23 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 
+import com.dummies.tasks.provider.TaskProvider;
 import com.dummies.tasks.receiver.OnAlarmReceiver;
 
 import java.util.Calendar;
 
 import static com.dummies.tasks.fragment.TaskEditFragment.TASK_ID;
 
+import static com.dummies.tasks.provider.TaskProvider.COLUMN_TASKID;
+import static com.dummies.tasks.provider.TaskProvider.COLUMN_TITLE;
+
 /**
  * A helper class that knows how to set reminders using the AlarmManager
  */
 public class ReminderManager {
 
-    private Context context;
-    private AlarmManager alarmManager;
+    Context context;
+    AlarmManager alarmManager;
 
     public ReminderManager(Context context) {
         this.context = context;
@@ -25,19 +29,21 @@ public class ReminderManager {
                 .getSystemService(Context.ALARM_SERVICE);
     }
 
-    public void setReminder(Long taskId, Calendar when) {
+    public void setReminder(long taskId, String title, Calendar when) {
 
         // Create an intent for our OnAlarmReceiver,
         // which will show the notification when it is called
         Intent i = new Intent(context, OnAlarmReceiver.class);
-        i.putExtra(TASK_ID, (long) taskId);
+        i.putExtra(TASK_ID, taskId);
+        i.putExtra(TASK_TITLE, title);
 
         // Create the PendingIntent that will wrap the
         // above intent.  All intents that are used in
         // the AlarmManager must be wrapped in a PendingIntent to "give
         // permission" to the AlarmManager to call back into our
         // application.
-        PendingIntent pi = PendingIntent.getBroadcast(context, 0, i, 0);
+        PendingIntent pi = PendingIntent.getBroadcast(context, 0, i,
+                PendingIntent.FLAG_ONE_SHOT);
 
         // Set the alarm
         alarmManager.set(AlarmManager.RTC_WAKEUP, when.getTimeInMillis(),

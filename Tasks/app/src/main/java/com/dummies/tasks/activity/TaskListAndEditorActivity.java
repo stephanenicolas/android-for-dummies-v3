@@ -9,14 +9,16 @@ import android.os.Bundle;
 import com.dummies.tasks.fragment.TaskEditFragment;
 import com.dummies.tasks.interfaces.OnEditFinished;
 import com.dummies.tasks.R;
+import com.dummies.tasks.interfaces.OnEditTask;
+import com.dummies.tasks.provider.TaskProvider;
 
 import static com.dummies.tasks.fragment.TaskEditFragment.TASK_ID;
 
 /**
  * Our Reminder List and Edit activity for Tablets
  */
-public class TaskListAndEditorActivity extends Activity implements
-        com.dummies.tasks.interfaces.OnEditTask, OnEditFinished {
+public class TaskListAndEditorActivity extends Activity
+        implements OnEditTask, OnEditFinished {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -30,7 +32,7 @@ public class TaskListAndEditorActivity extends Activity implements
     @Override
     public void editTask(long id) {
         // Create the fragment and set the task id
-        com.dummies.tasks.fragment.TaskEditFragment fragment = new com.dummies.tasks.fragment.TaskEditFragment();
+        TaskEditFragment fragment = new TaskEditFragment();
         Bundle arguments = new Bundle();
         arguments.putLong(TASK_ID, id);
         fragment.setArguments(arguments);
@@ -40,7 +42,7 @@ public class TaskListAndEditorActivity extends Activity implements
         FragmentTransaction transaction = getFragmentManager()
                 .beginTransaction();
         transaction.replace(R.id.edit_container, fragment,
-                com.dummies.tasks.fragment.TaskEditFragment.DEFAULT_EDIT_FRAGMENT_TAG);
+                TaskEditFragment.DEFAULT_EDIT_FRAGMENT_TAG);
         // Add this change to the backstack, so that when the user
         // clicks the back button we'll pop this editor off the stack.
         // If we don't do this, the whole activity will close when the
@@ -60,9 +62,8 @@ public class TaskListAndEditorActivity extends Activity implements
         FragmentTransaction transaction = fragmentManager
                 .beginTransaction();
         Fragment previousFragment = fragmentManager
-                .findFragmentByTag(com.dummies.tasks.fragment
-                        .TaskEditFragment
-                        .DEFAULT_EDIT_FRAGMENT_TAG);
+                .findFragmentByTag(
+                        TaskEditFragment.DEFAULT_EDIT_FRAGMENT_TAG);
         transaction.remove(previousFragment);
         transaction.commit();
     }

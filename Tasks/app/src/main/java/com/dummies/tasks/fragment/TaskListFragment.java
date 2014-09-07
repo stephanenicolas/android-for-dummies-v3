@@ -32,6 +32,10 @@ import com.squareup.picasso.Picasso;
 
 import java.sql.SQLException;
 import java.util.List;
+import static com.dummies.tasks.provider.TaskProvider.COLUMN_NOTES;
+import static com.dummies.tasks.provider.TaskProvider.COLUMN_TASKID;
+import static com.dummies.tasks.provider.TaskProvider.COLUMN_TITLE;
+import static com.dummies.tasks.provider.TaskProvider.CONTENT_URI;
 
 public class TaskListFragment extends Fragment implements
         LoaderManager.LoaderCallbacks<List<Task>> {
@@ -171,7 +175,7 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
     public ViewHolder onCreateViewHolder(ViewGroup parent, int i) {
         // create a new view
         CardView v = (CardView) LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.task_row, parent, false);
+                .inflate(R.layout.task_card, parent, false);
 
         // wrap it in a ViewHolder
         return new ViewHolder(v);
@@ -184,10 +188,11 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
 
         // set the text
         viewHolder.titleView.setText(tasks.get(i).getTitle());
+        viewHolder.notesView.setText(tasks.get(i).getBody());
 
         // set the thumbnail image
         Picasso.with(context)
-                .load("http://lorempixel.com/200/200/cats/?fakeId=" + id)
+                .load(TaskEditFragment.getImageUrlForTask( context, id) )
                 .into(viewHolder.imageView);
 
         // Set the click action
@@ -243,12 +248,14 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
     static class ViewHolder extends RecyclerView.ViewHolder {
         CardView cardView;
         TextView titleView;
+        TextView notesView;
         ImageView imageView;
 
         public ViewHolder(CardView itemView) {
             super(itemView);
             cardView = itemView;
             titleView = (TextView) itemView.findViewById(R.id.text1);
+            notesView = (TextView) itemView.findViewById(R.id.text2);
             imageView = (ImageView) itemView.findViewById(R.id.image);
         }
 

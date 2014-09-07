@@ -1,5 +1,7 @@
 package com.dummies.tasks.fragment;
 
+import android.app.ActionBar;
+import android.app.Activity;
 import android.app.DatePickerDialog.OnDateSetListener;
 import android.app.DialogFragment;
 import android.app.Fragment;
@@ -7,14 +9,31 @@ import android.app.FragmentTransaction;
 import android.app.LoaderManager;
 import android.app.TimePickerDialog.OnTimeSetListener;
 import android.content.Context;
+import android.content.ContentUris;
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.CursorLoader;
 import android.content.Loader;
 import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.Point;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.ColorDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.support.v7.graphics.Palette;
+import android.support.v7.graphics.PaletteItem;
+import android.view.Display;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
@@ -30,12 +49,20 @@ import com.dummies.tasks.util.ReminderManager;
 import com.j256.ormlite.android.apptools.OrmLitePreparedQueryLoader;
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.stmt.PreparedQuery;
+import com.squareup.picasso.Callback;
 import com.squareup.picasso.Picasso;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.List;
+
+import static com.dummies.tasks.provider.TaskProvider.COLUMN_DATE_TIME;
+import static com.dummies.tasks.provider.TaskProvider.COLUMN_NOTES;
+import static com.dummies.tasks.provider.TaskProvider.COLUMN_TASKID;
+import static com.dummies.tasks.provider.TaskProvider.COLUMN_TITLE;
+import static com.dummies.tasks.provider.TaskProvider.CONTENT_URI;
 
 public class TaskEditFragment extends Fragment implements
         OnDateSetListener, OnTimeSetListener,
@@ -45,9 +72,6 @@ public class TaskEditFragment extends Fragment implements
             "editFragmentTag";
     public static final String TASK_ID = "taskId";
 
-    //
-    // Dialog Constants
-    //
     static final String YEAR = "year";
     static final String MONTH = "month";
     static final String DAY = "day";
@@ -55,18 +79,14 @@ public class TaskEditFragment extends Fragment implements
     static final String MINS = "mins";
     static final String CALENDAR = "calendar";
 
-    //
-    // Date Format
-    //
-    private static final String DATE_FORMAT = "yyyy-MM-dd";
-    private static final String TIME_FORMAT = "kk:mm";
-
+    View rootView;
     Dao<Task,Long> taskDao;
     EditText titleText;
-    EditText bodyText;
+    EditText notesText;
     ImageView imageView;
     Button dateButton;
     Button timeButton;
+    ActionBar actionBar;
     long taskId;
     Calendar calendar;
 
@@ -98,6 +118,12 @@ public class TaskEditFragment extends Fragment implements
     }
 
     @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        setHasOptionsMenu(true);
+    }
+
+    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
@@ -107,8 +133,10 @@ public class TaskEditFragment extends Fragment implements
                 container, false);
 
         // From the layout, get a few views that we're going to work with
+        actionBar = getActivity().getActionBar();
+        rootView = v.getRootView();
         titleText = (EditText) v.findViewById(R.id.title);
-        bodyText = (EditText) v.findViewById(R.id.body);
+        notesText = (EditText) v.findViewById(R.id.notes);
         dateButton = (Button) v.findViewById(R.id.task_date);
         timeButton = (Button) v.findViewById(R.id.task_time);
         imageView = (ImageView) v.findViewById(R.id.image);
@@ -134,53 +162,51 @@ public class TaskEditFragment extends Fragment implements
             @Override
             public void onClick(View view) {
 
-                try {
-                    // taskId==0 when we create a new task,
-                    // otherwise it's the id of the task being edited.
-                    if (taskId == 0) {
+                // Put all the values the user entered into a
+                // ContentValues object
+                ContentValues values = new ContentValues();
+                values.put(COLUMN_TASKID, taskId);
+                values.put(COLUMN_TITLE, titleText.getText().toString());
+                values.put(COLUMN_BODY, bodyText.getText().toString());
+                values.put(COLUMN_DATE_TIME, calendar.getTimeInMillis());
 
-                        // Create the new task and set taskId to the id of
-                        // the new task.
-                        Task task = new Task();
-                        task.setTitle(titleText.getText().toString());
-                        task.setBody(bodyText.getText().toString());
-                        task.setDateTime(calendar.getTime());
+                // taskId==0 when we create a new task,
+                // otherwise it's the id of the task being edited.
+                if (taskId == 0) {
 
-                        taskDao.create(task);
+                    // Create the new task and set taskId to the id of
+                    // the new task.
+                    Uri itemUri = getActivity().getContentResolver()
+                            .insert(CONTENT_URI, values);
+                    taskId = ContentUris.parseId(itemUri);
 
-                        // Update the id field based on what Dao.create
-                        // tells us the new ID is.
-                        taskId = task.getId();
+                } else {
 
-                    } else {
+                    // Edit the task
+                    int count = getActivity().getContentResolver().update(
+                            ContentUris.withAppendedId(CONTENT_URI,
+                                    taskId),
+                            values, null, null);
 
-                        Task task = taskDao.queryForId(taskId);
-                        task.setTitle(titleText.getText().toString());
-                        task.setBody(bodyText.getText().toString());
-                        task.setDateTime(calendar.getTime());
-
-                        taskDao.update(task);
-                    }
-
-                    // Notify the user of the change using a Toast
-                    Toast.makeText(getActivity(),
-                            getString(R.string.task_save_success),
-                            Toast.LENGTH_SHORT).show();
-
-                    // Create a reminder for this task
-                    new ReminderManager(getActivity()).setReminder(taskId,
-                            calendar);
-
-                    // Tell our enclosing activity that we are done so that
-                    // it can cleanup whatever it needs to clean up.
-                    ((OnEditFinished) getActivity()).finishEditingTask();
-
-                } catch( SQLException e ) {
-                    Toast.makeText(getActivity(),
-                            getString(R.string.task_save_error),
-                            Toast.LENGTH_LONG).show();
+                    // If somehow we didn't edit exactly one task,
+                    // throw an error
+                    if (count != 1)
+                        throw new IllegalStateException(
+                                "Unable to update " + taskId);
                 }
 
+                // Notify the user of the change using a Toast
+                Toast.makeText(getActivity(),
+                        getString(R.string.task_saved_message),
+                        Toast.LENGTH_SHORT).show();
+
+                // Tell our enclosing activity that we are done so that
+                // it can cleanup whatever it needs to clean up.
+                ((OnEditFinished) getActivity()).finishEditingTask();
+
+                // Create a reminder for this task
+                new ReminderManager(getActivity()).setReminder(taskId,
+                        calendar);
             }
 
         });
@@ -217,12 +243,81 @@ public class TaskEditFragment extends Fragment implements
         return v;
     }
 
+    private void save() {
+        // Put all the values the user entered into a
+        // ContentValues object
+        String title = titleText.getText().toString();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_TASKID, taskId);
+        values.put(COLUMN_TITLE, title);
+        values.put(COLUMN_NOTES, notesText.getText().toString());
+        values.put(COLUMN_DATE_TIME, calendar.getTimeInMillis());
+
+        // taskId==0 when we create a new task,
+        // otherwise it's the id of the task being edited.
+        if (taskId == 0) {
+
+            // Create the new task and set taskId to the id of
+            // the new task.
+            Uri itemUri = getActivity().getContentResolver()
+                    .insert(CONTENT_URI, values);
+            taskId = ContentUris.parseId(itemUri);
+
+        } else {
+
+            // Edit the task
+            int count = getActivity().getContentResolver().update(
+                    ContentUris.withAppendedId(CONTENT_URI,
+                            taskId),
+                    values, null, null);
+
+            // If somehow we didn't edit exactly one task,
+            // throw an error
+            if (count != 1)
+                throw new IllegalStateException(
+                        "Unable to update " + taskId);
+        }
+
+        // Notify the user of the change using a Toast
+        Toast.makeText(getActivity(),
+                getString(R.string.task_saved_message),
+                Toast.LENGTH_SHORT).show();
+
+        // Create a reminder for this task
+        new ReminderManager(getActivity()).setReminder(
+                taskId, title, calendar);
+    }
+
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
         // Save the calendar instance in case the user changed it
         outState.putSerializable(CALENDAR, calendar);
+    }
+
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        menu.add(0, 1, 0, R.string.confirm).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Save button
+        if( item.getItemId() == 1) {
+            save();
+
+            // Tell our enclosing activity that we are done so that
+            // it can cleanup whatever it needs to clean up.
+            ((OnEditFinished) getActivity()).finishEditingTask();
+
+            return true;
+        }
+
+        // If we can't handle this menu item, see if our parent can
+        return super.onOptionsItemSelected(item);
     }
 
     private void showDatePicker() {
@@ -248,12 +343,12 @@ public class TaskEditFragment extends Fragment implements
 
     private void updateButtons() {
         // Set the time button text
-        SimpleDateFormat timeFormat = new SimpleDateFormat(TIME_FORMAT);
+        DateFormat timeFormat = DateFormat.getTimeInstance(DateFormat.SHORT);
         String timeForButton = timeFormat.format(calendar.getTime());
         timeButton.setText(timeForButton);
 
         // Set the date button text
-        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+        DateFormat dateFormat = DateFormat.getDateInstance();
         String dateForButton = dateFormat.format(calendar.getTime());
         dateButton.setText(dateForButton);
     }
@@ -306,14 +401,58 @@ public class TaskEditFragment extends Fragment implements
         Task task = tasks.iterator().next();
 
         titleText.setText(task.getTitle());
-        bodyText.setText(task.getBody());
+        notesText.setText(task.getBody());
         calendar.setTime(task.getDateTime());
 
         // set the thumbnail image
         Picasso.with(getActivity())
-                .load("http://lorempixel.com/200/200/cats/?fakeId=" + taskId)
-                .into(imageView);
+                .load(getImageUrlForTask(getActivity(),taskId))
+                .into(imageView, new Callback() {
+                    @Override
+                    public void onSuccess() {
+                        // Set the colors of the activity based on the
+                        // colors of the image, if available
+                        Bitmap bitmap = ((BitmapDrawable)imageView
+                                .getDrawable())
+                                .getBitmap();
+                        Palette palette = Palette.generate(bitmap,32);
 
+                        PaletteItem bgColor =
+                                palette.getLightMutedColor();
+                        PaletteItem actionbarColor =
+                                palette.getDarkVibrantColor();
+                        PaletteItem statusColor =
+                                palette.getDarkMutedColor();
+
+                        if( bgColor!=null && actionbarColor!=null ) {
+                            rootView.setBackgroundColor(bgColor.getRgb());
+                            actionBar.setBackgroundDrawable(
+                                    new ColorDrawable(actionbarColor
+                                            .getRgb())
+                            );
+                            ((Activity)rootView.getContext())
+                                    .getWindow()
+                                    .setStatusBarColor(
+                                            (statusColor!=null ?
+                                                    statusColor :
+                                                    actionbarColor )
+                                    .getRgb());
+                        }
+                    }
+
+                    @Override
+                    public void onError() {
+                        // do nothing
+                    }
+                });
+
+
+        // Get the date from the database
+        Long dateInMillis = task.getLong(task
+                .getColumnIndexOrThrow(
+                        COLUMN_DATE_TIME));
+        Date date = new Date(dateInMillis);
+        calendar.setTime(date);
 
         updateButtons();
     }
@@ -321,6 +460,21 @@ public class TaskEditFragment extends Fragment implements
     @Override
     public void onLoaderReset(Loader<List<Task>> ignored) {
         // nothing to reset for this fragmentClass
+    }
+
+    // TODO move this somewhere else
+    public static String getImageUrlForTask(
+            Context context, long taskId) {
+
+        WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        Display display = wm.getDefaultDisplay();
+        Point size = new Point();
+        display.getSize(size);
+        int width = size.x; // in pixels
+        int height = width * 2 / 3; // like a 4 x 6 photo
+
+        return "http://lorempixel.com/" + width + "/" + height +
+                "/cats/?fakeId=" + taskId;
     }
 }
 

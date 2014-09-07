@@ -4,6 +4,9 @@ import android.app.Fragment;
 import android.content.Intent;
 
 import com.dummies.tasks.fragment.TaskEditFragment;
+import com.dummies.tasks.fragment.TaskListFragment;
+import com.dummies.tasks.interfaces.OnEditTask;
+import com.dummies.tasks.provider.TaskProvider;
 import com.dummies.tasks.util.SingleFragmentActivity;
 
 import static com.dummies.tasks.fragment.TaskEditFragment.TASK_ID;
@@ -12,13 +15,13 @@ import static com.dummies.tasks.fragment.TaskEditFragment.TASK_ID;
  * Our Reminder List activity for Phones
  */
 public class TaskListActivity extends SingleFragmentActivity
-        implements com.dummies.tasks.interfaces.OnEditTask {
+        implements OnEditTask {
 
     @Override
     protected Fragment newFragmentInstance() {
         // Create a new TaskListFragment when requested.
         // This fragment doesn't need any params when it's created
-        return new com.dummies.tasks.fragment.TaskListFragment();
+        return new TaskListFragment();
     }
 
     /**

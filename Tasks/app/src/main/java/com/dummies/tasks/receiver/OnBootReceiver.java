@@ -13,6 +13,11 @@ import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.List;
 
+import static com.dummies.tasks.provider.TaskProvider.COLUMN_DATE_TIME;
+import static com.dummies.tasks.provider.TaskProvider.COLUMN_TASKID;
+import static com.dummies.tasks.provider.TaskProvider.COLUMN_TITLE;
+import static com.dummies.tasks.provider.TaskProvider.CONTENT_URI;
+
 /**
  * This class will be triggered when the phone first boots so that our
  * app can re-install any alarms that need to be set.  If we didn't do
@@ -47,7 +52,7 @@ public class OnBootReceiver extends BroadcastReceiver {
 
             // Set the reminder
             new ReminderManager(context).setReminder(task.getId(),
-                    cal);
+                    task.getTitle(), cal); 
         }
     }
 }
