@@ -12,9 +12,7 @@ import com.dummies.tasks.activity.TaskEditActivity;
 
 import static android.content.Context.NOTIFICATION_SERVICE;
 import static com.dummies.tasks.fragment.TaskEditFragment.TASK_ID;
-import static com.dummies.tasks.provider.TaskProvider
-        .COLUMN_TASKID;
-import static com.dummies.tasks.provider.TaskProvider.COLUMN_TITLE;
+import static com.dummies.tasks.fragment.TaskEditFragment.TASK_TITLE;
 
 public class OnAlarmReceiver extends BroadcastReceiver {
     @Override
@@ -37,8 +35,9 @@ public class OnAlarmReceiver extends BroadcastReceiver {
         // for the specified task id.  We get the id of the task
         // from the OnAlarmReceiver's broadcast intent.
         Intent taskEditIntent =
-                new Intent(context, com.dummies.tasks.activity.TaskEditActivity.class);
-        long taskId = intent.getExtras().getLong(TASK_ID);
+                new Intent(context, TaskEditActivity.class);
+        long taskId = intent.getLongExtra(TASK_ID, -1);
+        String title = intent.getStringExtra(TASK_TITLE);
         taskEditIntent.putExtra(TASK_ID, taskId);
 
         // Create the PendingIntent that will wrap the

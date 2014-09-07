@@ -3,10 +3,8 @@ package com.dummies.tasks.activity;
 import android.app.Fragment;
 import android.content.Intent;
 
-import com.dummies.tasks.fragment.TaskEditFragment;
 import com.dummies.tasks.fragment.TaskListFragment;
 import com.dummies.tasks.interfaces.OnEditTask;
-import com.dummies.tasks.provider.TaskProvider;
 import com.dummies.tasks.util.SingleFragmentActivity;
 
 import static com.dummies.tasks.fragment.TaskEditFragment.TASK_ID;

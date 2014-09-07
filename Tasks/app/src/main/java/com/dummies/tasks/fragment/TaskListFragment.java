@@ -32,10 +32,6 @@ import com.squareup.picasso.Picasso;
 
 import java.sql.SQLException;
 import java.util.List;
-import static com.dummies.tasks.provider.TaskProvider.COLUMN_NOTES;
-import static com.dummies.tasks.provider.TaskProvider.COLUMN_TASKID;
-import static com.dummies.tasks.provider.TaskProvider.COLUMN_TITLE;
-import static com.dummies.tasks.provider.TaskProvider.CONTENT_URI;
 
 public class TaskListFragment extends Fragment implements
         LoaderManager.LoaderCallbacks<List<Task>> {
@@ -124,11 +120,6 @@ public class TaskListFragment extends Fragment implements
 // TODO Remove this class once XXX is accepted
 class OrmLiteListLoader<T,ID> extends
         OrmLiteQueryForAllLoader<T,ID> implements Dao.DaoObserver {
-
-
-    protected OrmLiteListLoader(Context context) {
-        super(context);
-    }
 
     protected OrmLiteListLoader(Context context, Dao<T,ID> dao) {
         super(context, dao);

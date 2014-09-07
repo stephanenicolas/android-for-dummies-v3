@@ -6,11 +6,10 @@ import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.os.Bundle;
 
+import com.dummies.tasks.R;
 import com.dummies.tasks.fragment.TaskEditFragment;
 import com.dummies.tasks.interfaces.OnEditFinished;
-import com.dummies.tasks.R;
 import com.dummies.tasks.interfaces.OnEditTask;
-import com.dummies.tasks.provider.TaskProvider;
 
 import static com.dummies.tasks.fragment.TaskEditFragment.TASK_ID;
 

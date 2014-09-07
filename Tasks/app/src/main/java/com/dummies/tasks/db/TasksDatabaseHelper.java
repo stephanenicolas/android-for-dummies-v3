@@ -2,7 +2,6 @@ package com.dummies.tasks.db;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
 
 import com.dummies.tasks.model.Task;
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;

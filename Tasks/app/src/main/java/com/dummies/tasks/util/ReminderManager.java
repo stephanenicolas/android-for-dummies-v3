@@ -5,15 +5,12 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 
-import com.dummies.tasks.provider.TaskProvider;
 import com.dummies.tasks.receiver.OnAlarmReceiver;
 
 import java.util.Calendar;
 
 import static com.dummies.tasks.fragment.TaskEditFragment.TASK_ID;
-
-import static com.dummies.tasks.provider.TaskProvider.COLUMN_TASKID;
-import static com.dummies.tasks.provider.TaskProvider.COLUMN_TITLE;
+import static com.dummies.tasks.fragment.TaskEditFragment.TASK_TITLE;
 
 /**
  * A helper class that knows how to set reminders using the AlarmManager

@@ -9,18 +9,12 @@ import android.app.FragmentTransaction;
 import android.app.LoaderManager;
 import android.app.TimePickerDialog.OnTimeSetListener;
 import android.content.Context;
-import android.content.ContentUris;
-import android.content.ContentValues;
-import android.content.Context;
-import android.content.CursorLoader;
 import android.content.Loader;
 import android.content.SharedPreferences;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
@@ -53,16 +47,9 @@ import com.squareup.picasso.Callback;
 import com.squareup.picasso.Picasso;
 
 import java.sql.SQLException;
-import java.text.SimpleDateFormat;
 import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.List;
-
-import static com.dummies.tasks.provider.TaskProvider.COLUMN_DATE_TIME;
-import static com.dummies.tasks.provider.TaskProvider.COLUMN_NOTES;
-import static com.dummies.tasks.provider.TaskProvider.COLUMN_TASKID;
-import static com.dummies.tasks.provider.TaskProvider.COLUMN_TITLE;
-import static com.dummies.tasks.provider.TaskProvider.CONTENT_URI;
 
 public class TaskEditFragment extends Fragment implements
         OnDateSetListener, OnTimeSetListener,
@@ -71,6 +58,7 @@ public class TaskEditFragment extends Fragment implements
     public static final String DEFAULT_EDIT_FRAGMENT_TAG =
             "editFragmentTag";
     public static final String TASK_ID = "taskId";
+    public static final String TASK_TITLE = "taskTitle";
 
     static final String YEAR = "year";
     static final String MONTH = "month";
@@ -80,13 +68,14 @@ public class TaskEditFragment extends Fragment implements
     static final String CALENDAR = "calendar";
 
     View rootView;
-    Dao<Task,Long> taskDao;
     EditText titleText;
     EditText notesText;
     ImageView imageView;
     Button dateButton;
     Button timeButton;
     ActionBar actionBar;
+
+    Dao<Task,Long> taskDao;
     long taskId;
     Calendar calendar;
 
@@ -156,61 +145,6 @@ public class TaskEditFragment extends Fragment implements
             }
         });
 
-        // Tell the confirmation button what to do when we click on it.
-        Button confirmButton = (Button) v.findViewById(R.id.confirm);
-        confirmButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-                // Put all the values the user entered into a
-                // ContentValues object
-                ContentValues values = new ContentValues();
-                values.put(COLUMN_TASKID, taskId);
-                values.put(COLUMN_TITLE, titleText.getText().toString());
-                values.put(COLUMN_BODY, bodyText.getText().toString());
-                values.put(COLUMN_DATE_TIME, calendar.getTimeInMillis());
-
-                // taskId==0 when we create a new task,
-                // otherwise it's the id of the task being edited.
-                if (taskId == 0) {
-
-                    // Create the new task and set taskId to the id of
-                    // the new task.
-                    Uri itemUri = getActivity().getContentResolver()
-                            .insert(CONTENT_URI, values);
-                    taskId = ContentUris.parseId(itemUri);
-
-                } else {
-
-                    // Edit the task
-                    int count = getActivity().getContentResolver().update(
-                            ContentUris.withAppendedId(CONTENT_URI,
-                                    taskId),
-                            values, null, null);
-
-                    // If somehow we didn't edit exactly one task,
-                    // throw an error
-                    if (count != 1)
-                        throw new IllegalStateException(
-                                "Unable to update " + taskId);
-                }
-
-                // Notify the user of the change using a Toast
-                Toast.makeText(getActivity(),
-                        getString(R.string.task_saved_message),
-                        Toast.LENGTH_SHORT).show();
-
-                // Tell our enclosing activity that we are done so that
-                // it can cleanup whatever it needs to clean up.
-                ((OnEditFinished) getActivity()).finishEditingTask();
-
-                // Create a reminder for this task
-                new ReminderManager(getActivity()).setReminder(taskId,
-                        calendar);
-            }
-
-        });
-
         if (taskId == 0) {
             // This is a new task - add defaults from preferences if set.
             SharedPreferences prefs = PreferenceManager
@@ -244,48 +178,48 @@ public class TaskEditFragment extends Fragment implements
     }
 
     private void save() {
-        // Put all the values the user entered into a
-        // ContentValues object
-        String title = titleText.getText().toString();
-        ContentValues values = new ContentValues();
-        values.put(COLUMN_TASKID, taskId);
-        values.put(COLUMN_TITLE, title);
-        values.put(COLUMN_NOTES, notesText.getText().toString());
-        values.put(COLUMN_DATE_TIME, calendar.getTimeInMillis());
+        try {
+            // taskId==0 when we create a new task,
+            // otherwise it's the id of the task being edited.
+            if (taskId == 0) {
 
-        // taskId==0 when we create a new task,
-        // otherwise it's the id of the task being edited.
-        if (taskId == 0) {
+                // Create the new task and set taskId to the id of
+                // the new task.
+                Task task = new Task();
+                task.setTitle(titleText.getText().toString());
+                task.setBody(notesText.getText().toString());
+                task.setDateTime(calendar.getTime());
 
-            // Create the new task and set taskId to the id of
-            // the new task.
-            Uri itemUri = getActivity().getContentResolver()
-                    .insert(CONTENT_URI, values);
-            taskId = ContentUris.parseId(itemUri);
+                taskDao.create(task);
 
-        } else {
+                // Update the id field based on what Dao.create
+                // tells us the new ID is.
+                taskId = task.getId();
 
-            // Edit the task
-            int count = getActivity().getContentResolver().update(
-                    ContentUris.withAppendedId(CONTENT_URI,
-                            taskId),
-                    values, null, null);
+            } else {
 
-            // If somehow we didn't edit exactly one task,
-            // throw an error
-            if (count != 1)
-                throw new IllegalStateException(
-                        "Unable to update " + taskId);
+                Task task = taskDao.queryForId(taskId);
+                task.setTitle(titleText.getText().toString());
+                task.setBody(notesText.getText().toString());
+                task.setDateTime(calendar.getTime());
+
+                taskDao.update(task);
+            }
+
+            // Notify the user of the change using a Toast
+            Toast.makeText(getActivity(),
+                    getString(R.string.task_save_success),
+                    Toast.LENGTH_SHORT).show();
+
+            // Create a reminder for this task
+            new ReminderManager(getActivity()).setReminder(taskId,
+                    titleText.getText().toString(), calendar);
+
+        } catch( SQLException e ) {
+            Toast.makeText(getActivity(),
+                    getString(R.string.task_save_error),
+                    Toast.LENGTH_LONG).show();
         }
-
-        // Notify the user of the change using a Toast
-        Toast.makeText(getActivity(),
-                getString(R.string.task_saved_message),
-                Toast.LENGTH_SHORT).show();
-
-        // Create a reminder for this task
-        new ReminderManager(getActivity()).setReminder(
-                taskId, title, calendar);
     }
 
     @Override
@@ -446,13 +380,6 @@ public class TaskEditFragment extends Fragment implements
                     }
                 });
 
-
-        // Get the date from the database
-        Long dateInMillis = task.getLong(task
-                .getColumnIndexOrThrow(
-                        COLUMN_DATE_TIME));
-        Date date = new Date(dateInMillis);
-        calendar.setTime(date);
 
         updateButtons();
     }
