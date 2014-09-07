@@ -11,8 +11,6 @@ import com.dummies.tasks.fragment.TaskEditFragment;
 import com.dummies.tasks.interfaces.OnEditFinished;
 import com.dummies.tasks.interfaces.OnEditTask;
 
-import static com.dummies.tasks.fragment.TaskEditFragment.TASK_ID;
-
 /**
  * Our Reminder List and Edit activity for Tablets
  */
@@ -33,7 +31,7 @@ public class TaskListAndEditorActivity extends Activity
         // Create the fragment and set the task id
         TaskEditFragment fragment = new TaskEditFragment();
         Bundle arguments = new Bundle();
-        arguments.putLong(TASK_ID, id);
+        arguments.putLong(TaskEditFragment.TASK_ID, id);
         fragment.setArguments(arguments);
 
         // Add the fragment to the activity. If there's one already
