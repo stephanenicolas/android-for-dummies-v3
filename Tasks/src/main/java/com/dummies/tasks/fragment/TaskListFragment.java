@@ -183,7 +183,7 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
 
         // set the thumbnail image
         Picasso.with(context)
-                .load(TaskEditFragment.getImageUrlForTask( context, id) )
+                .load(TaskEditFragment.getImageUrlForTask(id) )
                 .into(viewHolder.imageView);
 
         // Set the click action
@@ -207,16 +207,9 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
                                 new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface
-                                                                dialogInterface, int i) {
-
-                                        try {
-                                            taskDao.delete(tasks.get(i));
-                                        } catch (SQLException e) {
-                                            Toast.makeText(context,
-                                                    R.string.task_save_error,
-                                                    Toast.LENGTH_LONG)
-                                                    .show();
-                                        }
+                                                        dialogInterface,
+                                                        int i) {
+                                        deleteTask(context,i);
                                     }
                                 })
                         .show();
@@ -224,6 +217,17 @@ class TaskListAdapter extends RecyclerView.Adapter<TaskListAdapter.ViewHolder> {
             }
         });
 
+    }
+
+    private void deleteTask(Context context, int index ) {
+        try {
+            taskDao.delete(tasks.get(index));
+        } catch (SQLException e) {
+            Toast.makeText(context,
+                    R.string.task_save_error,
+                    Toast.LENGTH_LONG)
+                    .show();
+        }
     }
 
     @Override

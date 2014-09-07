@@ -9,25 +9,24 @@ import android.app.FragmentTransaction;
 import android.app.LoaderManager;
 import android.app.TimePickerDialog.OnTimeSetListener;
 import android.content.Context;
+import android.content.ContentUris;
+import android.content.ContentValues;
+import android.content.CursorLoader;
 import android.content.Loader;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
-import android.graphics.Point;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
-import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.v7.graphics.Palette;
 import android.support.v7.graphics.PaletteItem;
-import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
@@ -55,18 +54,23 @@ public class TaskEditFragment extends Fragment implements
         OnDateSetListener, OnTimeSetListener,
         LoaderManager.LoaderCallbacks<List<Task>> {
 
+    // The "name" that we'll use to identify this fragment
     public static final String DEFAULT_EDIT_FRAGMENT_TAG =
-            "editFragmentTag";
+            "editFragment";
     public static final String TASK_ID = "taskId";
     public static final String TASK_TITLE = "taskTitle";
 
+    // Various date and time constants
     static final String YEAR = "year";
     static final String MONTH = "month";
     static final String DAY = "day";
     static final String HOUR = "hour";
     static final String MINS = "mins";
-    static final String CALENDAR = "calendar";
 
+    // Constants for saving instance state
+    static final String TASK_DATE_AND_TIME = "taskDateAndTime";
+
+    // Views
     View rootView;
     EditText titleText;
     EditText notesText;
@@ -75,9 +79,13 @@ public class TaskEditFragment extends Fragment implements
     Button timeButton;
     ActionBar actionBar;
 
+    // The Data Access Object that we'll use to get info about tasks
     Dao<Task,Long> taskDao;
+
+    // Some information about this task that we'll store here until we
+    // save it to the database
     long taskId;
-    Calendar calendar;
+    Calendar taskDateAndTime;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -90,13 +98,15 @@ public class TaskEditFragment extends Fragment implements
         // If we're restoring state from a previous activity, restore the
         // previous date as well
         if (savedInstanceState != null) {
-            calendar = (Calendar) savedInstanceState.getSerializable
-                    (CALENDAR);
+            taskId = savedInstanceState.getLong(TASK_ID);
+            taskDateAndTime =
+                    (Calendar) savedInstanceState.getSerializable
+                            (TASK_DATE_AND_TIME);
         }
 
         // If we didn't have a previous date, use "now"
-        if( calendar==null ) {
-            calendar = Calendar.getInstance();
+        if (taskDateAndTime == null) {
+            taskDateAndTime = Calendar.getInstance();
         }
 
         // Set the task id from the intent arguments, if available.
@@ -161,10 +171,10 @@ public class TaskEditFragment extends Fragment implements
                 titleText.setText(defaultTitle);
 
             if (defaultTime != null && defaultTime.length() > 0)
-                calendar.add(Calendar.MINUTE,
+                taskDateAndTime.add(Calendar.MINUTE,
                         Integer.parseInt(defaultTime));
 
-            updateButtons();
+            updateDateAndTimeButtons();
 
         } else {
 
@@ -212,8 +222,8 @@ public class TaskEditFragment extends Fragment implements
                     Toast.LENGTH_SHORT).show();
 
             // Create a reminder for this task
-            new ReminderManager(getActivity()).setReminder(taskId,
-                    titleText.getText().toString(), calendar);
+            ReminderManager.setReminder(getActivity(), taskId,
+                    titleText.getText().toString(), taskDateAndTime);
 
         } catch( SQLException e ) {
             Toast.makeText(getActivity(),
@@ -222,87 +232,163 @@ public class TaskEditFragment extends Fragment implements
         }
     }
 
+    /**
+     * Android Activities can be killed at any time to save memory.  If
+     * the user returns to the activity, it may be re-created again.
+     * When it's killed, the Android OS will automatically
+     * save the current state of any views (such as EditTexts) that the
+     * user may have changed into the outState Bundle.  When it's
+     * re-created, those values will be automatically set for you in
+     * onCreate from the savedInstanceState bundle.
+     *
+     * However, while Android can do that for views for you
+     * automatically, Android cannot do that for non-views.  So any
+     * time you have any state that you or the user may modify in your
+     * fragments or activities, it's UP TO YOU to make sure you save
+     * them properly!  To do this, just save the value to the outState
+     * bundle, and then read it back in again from the
+     * savedInstanceState bundle in onCreate.
+     *
+     * DO NOT FORGET TO DO THIS!
+     *
+     * If you forget, your app will appear to work fine.  You won't
+     * immediately notice anything wrong.  But anytime you rotate your
+     * phone, or leave an app running for awhile in the background and
+     * then later return to it, you may experience random crashes and
+     * unexpected behavior.
+     */
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
-        // Save the calendar instance in case the user changed it
-        outState.putSerializable(CALENDAR, calendar);
+        // These two fields may have changed while our activity was
+        // running, so make sure we save them to our outState bundle so
+        // we can restore them later in onCreate.
+        outState.putLong(TASK_ID, taskId);
+        outState.putSerializable(TASK_DATE_AND_TIME, taskDateAndTime);
     }
 
 
+    /**
+     * Called when Android wants to create the options menu for our
+     * activity.  In this case, our options menu is our action bar.
+     */
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
-        menu.add(0, 1, 0, R.string.confirm).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+
+        // Create a menu item named "Save" and give it an id of 1.
+        // If you have multiple menu items, it's a good practice to
+        // create static final ints to name them.
+        menu.add(0, 1, 0, R.string.confirm)
+                .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Save button
-        if( item.getItemId() == 1) {
-            save();
+        switch(item.getItemId()) {
+            // The Save button was pressed
+            case 1:
+                save();
 
-            // Tell our enclosing activity that we are done so that
-            // it can cleanup whatever it needs to clean up.
-            ((OnEditFinished) getActivity()).finishEditingTask();
+                // Tell our enclosing activity that we are done so that
+                // it can cleanup whatever it needs to clean up.
+                ((OnEditFinished) getActivity()).finishEditingTask();
 
-            return true;
+                return true;
         }
 
         // If we can't handle this menu item, see if our parent can
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * A helper method to show our Date picker
+     */
     private void showDatePicker() {
+        // Create a fragment transaction
         FragmentTransaction ft = getFragmentManager().beginTransaction();
+
+        // Create the DatePickerDialogFragment and initialize it with
+        // the appropriate values.
         DialogFragment newFragment = new DatePickerDialogFragment();
         Bundle args = new Bundle();
-        args.putInt(YEAR, calendar.get(Calendar.YEAR));
-        args.putInt(MONTH, calendar.get(Calendar.MONTH));
-        args.putInt(DAY, calendar.get(Calendar.DAY_OF_MONTH));
+        args.putInt(YEAR, taskDateAndTime.get(Calendar.YEAR));
+        args.putInt(MONTH, taskDateAndTime.get(Calendar.MONTH));
+        args.putInt(DAY, taskDateAndTime.get(Calendar.DAY_OF_MONTH));
         newFragment.setArguments(args);
+
+        // Show the dialog, and name it "datePicker".  By naming it,
+        // Android can automatically manage its state for us if it
+        // needs to be killed and recreated.
         newFragment.show(ft, "datePicker");
     }
 
     private void showTimePicker() {
+        // Create a fragment transaction
         FragmentTransaction ft = getFragmentManager().beginTransaction();
+
+        // Create the TimePickerDialogFragment and initialize it with
+        // the appropriate values.
         DialogFragment newFragment = new TimePickerDialogFragment();
         Bundle args = new Bundle();
-        args.putInt(HOUR, calendar.get(Calendar.HOUR_OF_DAY));
-        args.putInt(MINS, calendar.get(Calendar.MINUTE));
+        args.putInt(HOUR, taskDateAndTime.get(Calendar.HOUR_OF_DAY));
+        args.putInt(MINS, taskDateAndTime.get(Calendar.MINUTE));
         newFragment.setArguments(args);
+
+        // Show the dialog, and name it "timePicker".  By naming it,
+        // Android can automatically manage its state for us if it
+        // needs to be killed and recreated.
         newFragment.show(ft, "timePicker");
     }
 
-    private void updateButtons() {
+    /**
+     * Call this method whenever the task's date/time has changed and
+     * we need to update our date and time buttons.
+     */
+    private void updateDateAndTimeButtons() {
         // Set the time button text
-        DateFormat timeFormat = DateFormat.getTimeInstance(DateFormat.SHORT);
-        String timeForButton = timeFormat.format(calendar.getTime());
+        DateFormat timeFormat =
+                DateFormat.getTimeInstance(DateFormat.SHORT);
+        String timeForButton = timeFormat.format(
+                taskDateAndTime.getTime());
         timeButton.setText(timeForButton);
 
         // Set the date button text
         DateFormat dateFormat = DateFormat.getDateInstance();
-        String dateForButton = dateFormat.format(calendar.getTime());
+        String dateForButton = dateFormat.format(
+                taskDateAndTime.getTime());
         dateButton.setText(dateForButton);
     }
 
+    /**
+     * This is the method that our Date Picker Dialog will call when
+     * the user picks a date in the dialog.
+     */
     @Override
     public void onDateSet(DatePicker view, int year, int monthOfYear,
                           int dayOfMonth) {
-        calendar.set(Calendar.YEAR, year);
-        calendar.set(Calendar.MONTH, monthOfYear);
-        calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
-        updateButtons();
+        taskDateAndTime.set(Calendar.YEAR, year);
+        taskDateAndTime.set(Calendar.MONTH, monthOfYear);
+        taskDateAndTime.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+        updateDateAndTimeButtons();
     }
 
+    /**
+     * This is the method that our Time Picker Dialog will call when
+     * the user picks a time in the dialog.
+     */
     @Override
     public void onTimeSet(TimePicker view, int hour, int minute) {
-        calendar.set(Calendar.HOUR_OF_DAY, hour);
-        calendar.set(Calendar.MINUTE, minute);
-        updateButtons();
+        taskDateAndTime.set(Calendar.HOUR_OF_DAY, hour);
+        taskDateAndTime.set(Calendar.MINUTE, minute);
+        updateDateAndTimeButtons();
     }
 
+    /**
+     * This method is called when Android needs to create a loader to
+     * load our task from the database.
+     */
     @Override
     public Loader<List<Task>> onCreateLoader(int id, Bundle args) {
         try {
@@ -316,13 +402,22 @@ public class TaskEditFragment extends Fragment implements
         }
     }
 
+    /**
+     * This methid is called when the loader has finished loading its
+     * data
+     */
     @Override
     public void onLoadFinished(Loader<List<Task>> loader,
                                List<Task> tasks) {
-        // Close this fragmentClass down if the item we're editing was
-        // deleted
+        // Sanity check.  If we weren't able to load anything,
+        // then just close this activity.
         if (tasks==null || tasks.size()!=1 ) {
-            new Handler().post(new Runnable() {
+            // onLoadFinished is called from a background thread.  Many
+            // operations that affect the UI aren't allowed from
+            // background threads.  So make sure that we call
+            // finishEditingTask from the UI thread instead of from a
+            // background thread.
+            getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     ((OnEditFinished) getActivity()).finishEditingTask();
@@ -334,16 +429,23 @@ public class TaskEditFragment extends Fragment implements
         // Get the first and only task in the list
         Task task = tasks.iterator().next();
 
+        // Set our title, notes, date and time from the DB
         titleText.setText(task.getTitle());
         notesText.setText(task.getBody());
-        calendar.setTime(task.getDateTime());
+        taskDateAndTime.setTime(task.getDateTime());
 
-        // set the thumbnail image
+        // Set the thumbnail image
         Picasso.with(getActivity())
-                .load(getImageUrlForTask(getActivity(),taskId))
+                .load(getImageUrlForTask(taskId))
                 .into(imageView, new Callback() {
                     @Override
                     public void onSuccess() {
+                        // Don't do this for tablets, only phones,
+                        // since it doesn't really work with a split
+                        // screen view.
+                        if( getResources().getBoolean(R.bool.isTablet) )
+                            return;
+
                         // Set the colors of the activity based on the
                         // colors of the image, if available
                         Bitmap bitmap = ((BitmapDrawable)imageView
@@ -376,12 +478,13 @@ public class TaskEditFragment extends Fragment implements
 
                     @Override
                     public void onError() {
-                        // do nothing
+                        // do nothing, we'll use the default colors
                     }
                 });
 
 
-        updateButtons();
+        // We updated our task info, so update the date and time buttons
+        updateDateAndTimeButtons();
     }
 
     @Override
@@ -390,20 +493,12 @@ public class TaskEditFragment extends Fragment implements
     }
 
     // TODO move this somewhere else
-    public static String getImageUrlForTask(
-            Context context, long taskId) {
+    public static String getImageUrlForTask(long taskId) {
 
-        WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
-        Display display = wm.getDefaultDisplay();
-        Point size = new Point();
-        display.getSize(size);
-        int width = size.x; // in pixels
-        int height = width * 2 / 3; // like a 4 x 6 photo
-
-        return "http://lorempixel.com/" + width + "/" + height +
-                "/cats/?fakeId=" + taskId;
+        return "http://lorempixel.com/600/400/cats/?fakeId=" + taskId;
     }
 }
+
 
 
 // TODO Remove this class once https://github.com/j256/ormlite-android/pull/22 is accepted
