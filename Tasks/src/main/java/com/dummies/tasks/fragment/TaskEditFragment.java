@@ -9,9 +9,6 @@ import android.app.FragmentTransaction;
 import android.app.LoaderManager;
 import android.app.TimePickerDialog.OnTimeSetListener;
 import android.content.Context;
-import android.content.ContentUris;
-import android.content.ContentValues;
-import android.content.CursorLoader;
 import android.content.Loader;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -198,7 +195,7 @@ public class TaskEditFragment extends Fragment implements
                 Task task = new Task();
                 task.setTitle(titleText.getText().toString());
                 task.setBody(notesText.getText().toString());
-                task.setDateTime(calendar.getTime());
+                task.setDateTime(taskDateAndTime.getTime());
 
                 taskDao.create(task);
 
@@ -211,7 +208,7 @@ public class TaskEditFragment extends Fragment implements
                 Task task = taskDao.queryForId(taskId);
                 task.setTitle(titleText.getText().toString());
                 task.setBody(notesText.getText().toString());
-                task.setDateTime(calendar.getTime());
+                task.setDateTime(taskDateAndTime.getTime());
 
                 taskDao.update(task);
             }
