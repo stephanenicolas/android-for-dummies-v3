@@ -13,7 +13,8 @@ public class MainActivity extends Activity {
 
 	private AudioManager mAudioManager;
 	private boolean mPhoneIsSilent;
-
+        private Button toggleButton = (Button) findViewById(R.id.toggleButton);
+        
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -29,18 +30,11 @@ public class MainActivity extends Activity {
 	}
 
 	private void setButtonClickListener() {
-		Button toggleButton = (Button) findViewById(R.id.toggleButton);
+		
 		toggleButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
-				if (mPhoneIsSilent) {
-					// Change back to normal mode
-					mAudioManager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
-					mPhoneIsSilent = false;
-				} else {
-					// Change to silent mode
-					mAudioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
-					mPhoneIsSilent = true;
-				}
+				mAudioManager.setRingerMode(mPhoneIsSilent ? AudioManager.RINGER_MODE_NORMAL : AudioManager.RINGER_MODE_SILENT);
+				mPhoneIsSilent = ! mPhoneIsSilent;
 
 				// Now toggle the UI again
 				toggleUi();
@@ -53,12 +47,7 @@ public class MainActivity extends Activity {
 	 */
 	private void checkIfPhoneIsSilent() {
 		int ringerMode = mAudioManager.getRingerMode();
-		if (ringerMode == AudioManager.RINGER_MODE_SILENT) {
-			mPhoneIsSilent = true;
-		} else {
-			mPhoneIsSilent = false;
-		}
-
+		mPhoneIsSilent = ringerMode == AudioManager.RINGER_MODE_SILENT;
 	}
 
 	/**
@@ -67,15 +56,7 @@ public class MainActivity extends Activity {
 	private void toggleUi() {
 
 		ImageView imageView = (ImageView) findViewById(R.id.phone_icon);
-		Drawable newPhoneImage;
-
-		if (mPhoneIsSilent) {
-			newPhoneImage = getResources().getDrawable(R.drawable.phone_silent);
-
-		} else {
-			newPhoneImage = getResources().getDrawable(R.drawable.phone_on);
-		}
-
+		Drawable newPhoneImage = getResources().getDrawable(mPhoneIsSilent ? R.drawable.phone_silent : R.drawable.phone_on);
 		imageView.setImageDrawable(newPhoneImage);
 	}
 
